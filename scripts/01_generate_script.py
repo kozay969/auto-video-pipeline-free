@@ -6,7 +6,8 @@ Uses Google Gemini API (free tier - no cost for this volume)
 import os
 import json
 import random
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 from pathlib import Path
 
 # Output directory
@@ -26,8 +27,7 @@ TOPIC_CATEGORIES = [
 ]
 
 def generate_script(topic_hint: str = "") -> dict:
-    genai.configure(api_key=os.environ["GEMINI_API_KEY"])
-    model = genai.GenerativeModel("gemini-3.6-flash")
+    client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
 
     # Pick random category if no hint
     category = topic_hint if topic_hint else random.choice(TOPIC_CATEGORIES)
@@ -63,12 +63,28 @@ JSON တစ်ခုတည်းသာ ထုတ်ပေးပါ။ အခြ�
 
     print(f"📝 Generating script for: {category}")
 
-    response = model.generate_content(
-        prompt,
-        generation_config=genai.types.GenerationConfig(max_output_tokens=2000),
+    response = client.models.generate_content(
+        model="gemini-3.6-flash",
+        contents=prompt,
+        config=types.GenerateContentConfig(
+            max_output_tokens=4096,
+            # Keep thinking minimal — this is a straightforward generation task,
+            # and thinking tokens count against max_output_tokens, so a high
+            # thinking level can silently eat the whole budget and leave no
+            # room for the actual answer.
+            thinking_config=types.ThinkingConfig(
+                thinking_level=types.ThinkingLevel.LOW
+            ),
+        ),
     )
 
-    raw = response.text.strip()
+    raw = (response.text or "").strip()
+
+    if not raw:
+        # Surface the raw response for debugging instead of a bare JSON error
+        raise RuntimeError(
+            f"Empty response from Gemini. Full response: {response.model_dump_json(exclude_none=True)}"
+        )
 
     # Extract JSON from response
     if "```json" in raw:
@@ -105,3 +121,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+    
