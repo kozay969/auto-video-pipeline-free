@@ -1,0 +1,74 @@
+name: 🎬 Auto Video Pipeline
+
+on:
+  schedule:
+    # Every day at 8:00 AM UTC (3:30 PM Myanmar Time)
+    - cron: '0 8 * * *'
+  workflow_dispatch:
+    inputs:
+      topic_hint:
+        description: 'Optional topic hint (leave empty for auto)'
+        required: false
+        default: ''
+
+jobs:
+  generate-and-send:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: 🐍 Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: 📦 Install Dependencies
+        run: |
+          pip install \
+            google-generativeai \
+            edge-tts \
+            requests \
+            pillow \
+            python-telegram-bot==20.7
+
+      - name: 🎨 Install FFmpeg
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y ffmpeg fonts-noto fonts-noto-cjk
+          ffmpeg -version
+
+      - name: 🤖 Step 1 - Generate Content & Script
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          TOPIC_HINT: ${{ github.event.inputs.topic_hint }}
+        run: python scripts/01_generate_script.py
+
+      - name: 🔊 Step 2 - Text-to-Speech (edge-tts, free)
+        env:
+          EDGE_TTS_VOICE: ${{ vars.EDGE_TTS_VOICE }}
+        run: python scripts/02_tts_edge.py
+
+      - name: 🎬 Step 3 - Render Video with FFmpeg
+        run: python scripts/03_render_video.py
+
+      - name: 📤 Step 4 - Send to Telegram
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python scripts/04_send_telegram.py
+
+      - name: 📁 Upload Artifacts (Debug)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pipeline-output-${{ github.run_number }}
+          path: |
+            output/script.json
+            output/audio.mp3
+            output/final_video.mp4
+          retention-days: 3
+          
