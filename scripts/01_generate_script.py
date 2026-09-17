@@ -27,7 +27,7 @@ TOPIC_CATEGORIES = [
 
 def generate_script(topic_hint: str = "") -> dict:
     genai.configure(api_key=os.environ["GEMINI_API_KEY"])
-    model = genai.GenerativeModel("gemini-2.0-flash")
+    model = genai.GenerativeModel("gemini-3.6-flash")
 
     # Pick random category if no hint
     category = topic_hint if topic_hint else random.choice(TOPIC_CATEGORIES)
@@ -105,4 +105,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-  
