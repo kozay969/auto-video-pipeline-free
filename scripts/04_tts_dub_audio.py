@@ -1,9 +1,7 @@
 import os
-import asyncio
-import edge_tts
+from gtts import gTTS
 
-async def generate_audio():
-    # File Path ကို processed/translated_script.txt ဟု ပြောင်းလဲပေးထားသည်
+def generate_dubbed_audio():
     script_path = "processed/translated_script.txt"
     output_audio = "processed/dubbed_audio.mp3"
 
@@ -14,21 +12,23 @@ async def generate_audio():
         text = f.read().strip()
 
     if not text:
-        print("Warning: Translated script is empty. Using fallback text.")
-        text = "No content to process."
+        print("Warning: Script is empty. Using fallback text.")
+        text = "မင်္ဂလာပါ"
 
-    print("Generating voiceover using Edge TTS...")
-    # မြန်မာအသံအတွက် my-MM-NilarNeural သို့မဟုတ် my-MM-ThihaNeural သုံးနိုင်သည်
-    voice = "my-MM-NilarNeural"
-    communicate = edge_tts.Communicate(text, voice)
+    print("Generating voiceover using gTTS...")
     
-    os.makedirs("processed", exist_ok=True)
-    await communicate.save(output_audio)
+    # Google TTS ဖြင့် မြန်မာအသံ ထုတ်ပေးခြင်း
+    try:
+        tts = gTTS(text=text, lang='my', slow=False)
+        tts.save(output_audio)
+        print("Successfully generated Myanmar audio using gTTS.")
+    except Exception as e:
+        print(f"gTTS Myanmar error: {e}. Falling back to English.")
+        tts = gTTS(text=text, lang='en', slow=False)
+        tts.save(output_audio)
+
     print(f"Saved dubbed audio to {output_audio}")
 
-def main():
-    asyncio.run(generate_audio())
-
 if __name__ == "__main__":
-    main()
+    generate_dubbed_audio()
     
