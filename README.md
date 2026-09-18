@@ -1,17 +1,19 @@
-# 🎬 Auto Video Dub Pipeline — Telegram Video ➜ Myanmar Dub
+# 🎬 Auto Video Dub Pipeline — Telegram Video ➜ Myanmar Dub ➜ GitHub Release
 
-Telegram ကို ပို့လိုက်တဲ့ video ကို auto scan ဖမ်းယူပြီး — **script ထုတ် (JSON) → ဘာသာပြန် → အသံသွင်း → မူရင်း video နဲ့ timing ကိုက်အောင် ပြန်ပေါင်း → Telegram ကို ပြန်ပို့** လုပ်ပေးတဲ့ GitHub Actions workflow။
+Telegram ကို ပို့လိုက်တဲ့ video ကို auto scan ဖမ်းယူပြီး — **script ထုတ် (JSON) → ဘာသာပြန် → အသံသွင်း → မူရင်း video နဲ့ timing ကိုက်အောင် ပြန်ပေါင်း → GitHub Release တစ်ခု အဖြစ် upload** လုပ်ပေးတဲ့ GitHub Actions workflow။
+
+> Dub ပြီးသား video ကို ဒီ repo ရဲ့ **Releases** page ကနေ download/ကြည့်လို့ရပါတယ် — Telegram ကို ပြန်ပို့ဖို့ မလိုအပ်ပါ။ (Video ရှာဖွေဖို့ source scan ကတော့ ယခုလိုပဲ Telegram ကနေပါ။)
 
 ---
 
 ## 📋 Pipeline Flow
 
 ```
-Telegram Bot        faster-whisper       Gemini API         edge-tts (free)        FFmpeg              Telegram Bot
-────────────   →   ───────────────  →  ─────────────  →  ──────────────────  →  ───────────────  →  ───────────
-Video လက်ခံ         Script ထုတ်          ဘာသာပြန်          Segment တစ်ခုချင်း       Timing ကိုက်အောင်      Dub ထားသော
-(auto scan)         (JSON, timestamp     (မြန်မာ)           အသံသွင်း                audio ကို video        video ပို့
-                     အပါ)                                  (timing stretch)        ထဲပြန်ထည့်
+Telegram Bot        faster-whisper       Gemini API         edge-tts (free)        FFmpeg              GitHub Release
+────────────   →   ───────────────  →  ─────────────  →  ──────────────────  →  ───────────────  →  ───────────────
+Video လက်ခံ         Script ထုတ်          ဘာသာပြန်          Segment တစ်ခုချင်း       Timing ကိုက်အောင်      Dub ထားသော video ကို
+(auto scan)         (JSON, timestamp     (မြန်မာ)           အသံသွင်း                audio ကို video        release asset
+                     အပါ)                                  (timing stretch)        ထဲပြန်ထည့်             အဖြစ် upload
 ```
 
 > 💰 **API cost — Gemini free tier + edge-tts (key မလို) + faster-whisper (local, free) သုံးထားပါတယ်။**
@@ -25,14 +27,15 @@ Repository → Settings → Secrets and Variables → Actions → **Secrets** ta
 | Secret Name | ဘာမလဲ | ဘယ်မှာရမလဲ |
 |-------------|--------|------------|
 | `GEMINI_API_KEY` | ဘာသာပြန်ဖို့ Gemini API key (**free**) | [aistudio.google.com/apikey](https://aistudio.google.com/apikey) |
-| `TELEGRAM_BOT_TOKEN` | Bot token | [@BotFather](https://t.me/BotFather) |
+| `TELEGRAM_BOT_TOKEN` | Source video ကို scan/download ဖို့ Bot token (input အတွက်ပဲ သုံး) | [@BotFather](https://t.me/BotFather) |
+
+> `GITHUB_TOKEN` ကို ထပ်ထည့်စရာမလိုပါ — GitHub Actions က run တိုင်း auto-provide လုပ်ပေးထားပြီးသားပါ။ Repository ရဲ့ **Settings → Actions → General → Workflow permissions** မှာ "Read and write permissions" ရွေးထားရပါမယ် (Release create/upload အတွက်)။
 
 Repository → Settings → Secrets and Variables → Actions → **Variables** tab (optional)
 
 | Variable Name | ဘာမလဲ | Default |
 |----------------|--------|---------|
 | `TELEGRAM_SOURCE_CHAT_ID` | ဒီ chat ကလာတဲ့ video ကိုပဲ လက်ခံမယ် (မထည့်ရင် bot မြင်နိုင်တဲ့ chat ဘယ်ကမဆို လက်ခံမယ်) | (empty = any) |
-| `TELEGRAM_OUTPUT_CHAT_ID` | Dub ပြီးသား video ကို ဘယ် chat/channel ကို ပို့မလဲ | (empty = video ရောက်လာတဲ့ chat ကို ပြန်ပို့) |
 | `TARGET_LANGUAGE` | ဘာသာပြန်မယ့် ဘာသာစကား code | `my` (Myanmar) |
 | `EDGE_TTS_VOICE` | Myanmar voice ရွေးချင်ရင် | `my-MM-ThihaNeural` (male). `my-MM-NilarNeural` က အမျိုးသမီးအသံ |
 | `WHISPER_MODEL_SIZE` | Speech-to-text model size (`tiny`/`base`/`small`/`medium`) | `small` |
@@ -50,7 +53,7 @@ https://api.telegram.org/bot<TOKEN>/getUpdates
 1. Video ကို bot ဆီ (DM / group / channel — bot ပါဝင်ထားရမယ်) ပို့ပါ။
 2. Workflow က **၁၅ မိနစ်တစ်ခါ** auto run ဖြစ်ပြီး Telegram ကို scan လုပ်ပါလိမ့်မယ် (`getUpdates` polling)။ Video အသစ်တွေ့ရင်ပဲ ကျန်တဲ့ step တွေ run ပါလိမ့်မယ်။
 3. Manual run ချင်ရင် **Actions → Auto Video Dub Pipeline → Run workflow** လုပ်နိုင်ပါတယ် (ဒါပေမယ့် video က Telegram ဘက်မှာ ရောက်နေဖို့လိုပါတယ်၊ ဒီ run က scan ပဲလုပ်ပေးတာပါ)။
-4. Pipeline ပြီးရင် dub လုပ်ထားတဲ့ video ကို configured chat ကို ပြန်ပို့ပါလိမ့်မယ်။
+4. Pipeline ပြီးရင် dub လုပ်ထားတဲ့ video ကို ဒီ repo ရဲ့ **GitHub Release** အသစ်တစ်ခု အဖြစ် upload လုပ်ပါလိမ့်မယ် — Repo → **Releases** tab ကနေ ဝင်ကြည့်/download လုပ်နိုင်ပါတယ်။ Release tag က `dub-run-<run number>` ပုံစံဖြစ်ပါတယ်။
 
 ### Processed-video tracking
 `state/last_update_id.txt` ဖိုင်က နောက်ဆုံးကြည့်ပြီးသား Telegram update id ကို မှတ်ထားပါတယ် — run တိုင်းအလိုအလျောက် commit ပြန်တင်ပေးမှာဖြစ်လို့ video တစ်ခုကို ထပ်ခါထပ်ခါ မ process ပါဘူး။
@@ -70,7 +73,7 @@ https://api.telegram.org/bot<TOKEN>/getUpdates
 │   ├── 03_translate_script.py          # Gemini → translated_script.json
 │   ├── 04_tts_dub_audio.py             # edge-tts → segment-by-segment, timing ကိုက်အောင် stretch
 │   ├── 05_merge_video.py               # FFmpeg → မူရင်း video + dub audio ပေါင်း
-│   └── 06_send_telegram.py             # Telegram Bot → dub ပြီးသား video ပို့
+│   └── 06_upload_github.py             # GitHub Release → dub ပြီးသား video upload
 ├── state/
 │   └── last_update_id.txt              # Processed watermark (auto-committed)
 ├── requirements.txt
@@ -130,7 +133,8 @@ Whisper က segment တစ်ခုချင်းစီရဲ့ `start`/`end` 
 | Video | မူရင်း video stream (ဖြစ်နိုင်ရင် re-encode မလုပ်ဘဲ copy) |
 | Audio | AAC 192kbps, dubbed |
 | Duration | မူရင်း video duration အတိုင်း |
-| Max Size | 45 MB (ကျော်ရင် auto-compress) |
+| Max Size | 2 GB (GitHub release-asset limit — ကျော်ရင် auto-compress) |
+| Delivery | GitHub Release asset (repo → **Releases** tab) |
 
 ---
 
@@ -159,6 +163,6 @@ Whisper က segment တစ်ခုချင်းစီရဲ့ `start`/`end` 
 **FFmpeg / copy codec error:**
 - Step 5 က `-c:v copy` ဖြင့် ကြိုးစားပြီး မအောင်မြင်ရင် အလိုအလျောက် re-encode (libx264) ပြန်ကြိုးစားပါတယ်
 
-**Telegram send မအောင်မြင်ရင်:**
-- `TELEGRAM_OUTPUT_CHAT_ID` (ရှိရင်) သို့မဟုတ် video ရောက်လာတဲ့ chat id မှန်မမှန် check ပါ
-- Bot ကို destination chat/channel မှာ admin/post ခွင့် ရှိမရှိ check ပါ
+**GitHub Release upload မအောင်မြင်ရင် (403 / Resource not accessible):**
+- Repo → **Settings → Actions → General → Workflow permissions** ကို "Read and write permissions" ပြောင်းပါ (default က read-only ဖြစ်နေတတ်ပါတယ်)
+- Video size 2GB ကျော်နေရင် `06_upload_github.py` က error ပေးပါလိမ့်မယ် — `05_merge_video.py` ရဲ့ compression logic ကို ချိန်ညှိနိုင်ပါတယ်
