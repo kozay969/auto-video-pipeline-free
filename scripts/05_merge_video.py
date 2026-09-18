@@ -54,7 +54,7 @@ def merge(video_path: Path, audio_path: Path, duration: float, output_path: Path
 
 
 def compress_video(path: Path) -> Path:
-    """Re-encode to a smaller file if it's over Telegram's bot upload limit."""
+    """Re-encode to a smaller file if it's over GitHub's release-asset limit."""
     compressed = OUTPUT_DIR / "final_dubbed_video_compressed.mp4"
     cmd = [
         "ffmpeg", "-y", "-i", str(path),
@@ -82,8 +82,8 @@ def main():
     size_mb = FINAL_PATH.stat().st_size / 1024 / 1024
     print(f"✅ Final video: {FINAL_PATH} ({size_mb:.1f} MB)")
 
-    if size_mb > 45:
-        print("⚠️  Video > 45MB, re-encoding at lower quality...")
+    if size_mb > 2000:
+        print("⚠️  Video > 2GB (GitHub release-asset limit), re-encoding at lower quality...")
         compress_video(FINAL_PATH)
         size_mb = FINAL_PATH.stat().st_size / 1024 / 1024
 
