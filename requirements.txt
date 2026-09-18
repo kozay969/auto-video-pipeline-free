@@ -4,4 +4,4 @@ gTTS
 moviepy
 pydub
 google-generativeai
-yt-dlp
+gdown
