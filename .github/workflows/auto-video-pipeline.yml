@@ -67,12 +67,12 @@ jobs:
         if: steps.fetch.outputs.has_video == 'true'
         run: python scripts/05_merge_video.py
 
-      - name: 📤 Step 6 - Send dubbed video to Telegram
+      - name: 📤 Step 6 - Upload dubbed video to GitHub Release
+        id: upload
         if: steps.fetch.outputs.has_video == 'true'
         env:
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_OUTPUT_CHAT_ID: ${{ vars.TELEGRAM_OUTPUT_CHAT_ID }}
-        run: python scripts/06_send_telegram.py
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python scripts/06_upload_github.py
 
       - name: 💾 Commit updated watermark (state/last_update_id.txt)
         if: always()
@@ -98,4 +98,3 @@ jobs:
             output/dubbed_audio.mp3
             output/final_dubbed_video.mp4
           retention-days: 3
-          
