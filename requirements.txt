@@ -1,5 +1,6 @@
 requests
-openai-whisper
+faster-whisper
 gTTS
 moviepy
 pydub
+google-generativeai
