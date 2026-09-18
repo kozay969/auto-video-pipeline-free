@@ -2,16 +2,12 @@ import argparse
 import os
 import sys
 import subprocess
+import gdown
 
-def download_youtube(url, output_path):
-    print(f"Downloading from YouTube using yt-dlp: {url}")
-    command = ["yt-dlp", "-f", "b", "-o", output_path, url]
-    result = subprocess.run(command, capture_output=True, text=True)
-    if result.returncode == 0:
-        print("YouTube video downloaded successfully.")
-    else:
-        print(f"yt-dlp error: {result.stderr}")
-        sys.exit(1)
+def download_gdrive(url, output_path):
+    print(f"Downloading from Google Drive: {url}")
+    # Google Drive Link ထဲကနေ File ID ကို ဆွဲထုတ်၍ ဒေါင်းလုဒ်လုပ်ပေးခြင်း
+    gdown.download(url=url, output=output_path, fuzzy=True, quiet=False)
 
 def download_direct_file(url, output_path):
     import requests
@@ -32,7 +28,6 @@ def main():
     parser.add_argument("--input", required=False, help="Video URL or Path")
     args = parser.parse_args()
 
-    # Get from argument or environment variable
     source = args.input or os.environ.get("VIDEO_URL") or os.environ.get("VIDEO_PATH")
 
     if not source:
@@ -45,8 +40,9 @@ def main():
 
     source = source.strip()
     if source.startswith("http://") or source.startswith("https://"):
-        if "youtube.com" in source or "youtu.be" in source:
-            download_youtube(source, output_file)
+        # Google Drive Link ဖြစ်ပါက gdown သုံးမည်
+        if "drive.google.com" in source:
+            download_gdrive(source, output_file)
         else:
             download_direct_file(source, output_file)
     elif os.path.exists(source):
@@ -58,4 +54,4 @@ def main():
 
 if __name__ == "__main__":
     main()
-    
+        
