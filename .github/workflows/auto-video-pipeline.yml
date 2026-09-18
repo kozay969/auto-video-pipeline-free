@@ -1,100 +1,53 @@
-name: 🎬 Auto Video Dub Pipeline
+name: Auto Video Processing Pipeline
 
 on:
-  schedule:
-    # Poll every 15 minutes for a new video sent to the bot
-    - cron: '*/15 * * * *'
-  workflow_dispatch: {}
-
-permissions:
-  contents: write   # needed to commit back the "last seen" watermark
-
-concurrency:
-  group: auto-video-dub-pipeline
-  cancel-in-progress: false
+  workflow_dispatch:
+    inputs:
+      video_source:
+        description: 'Direct Video URL or Repository File Path (e.g. videos/sample.mp4)'
+        required: true
+        default: 'videos/input.mp4'
 
 jobs:
-  fetch-and-dub:
+  process-video:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
 
     steps:
-      - name: 📥 Checkout Repository
+      - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: 🐍 Setup Python
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
-          cache: 'pip'
+          python-version: '3.10'
 
-      - name: 📦 Install Dependencies
-        run: pip install -r requirements.txt
-
-      - name: 🎨 Install FFmpeg
+      - name: Install System Dependencies (FFmpeg)
         run: |
-          sudo apt-get update -qq
+          sudo apt-get update
           sudo apt-get install -y ffmpeg
-          ffmpeg -version
 
-      - name: 📡 Step 1 - Check Telegram for a new video
-        id: fetch
-        env:
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_SOURCE_CHAT_ID: ${{ vars.TELEGRAM_SOURCE_CHAT_ID }}
-        run: python scripts/01_fetch_telegram_video.py
+      - name: Install Python Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
 
-      - name: 🧠 Step 2 - Transcribe (faster-whisper, free)
-        if: steps.fetch.outputs.has_video == 'true'
-        env:
-          WHISPER_MODEL_SIZE: ${{ vars.WHISPER_MODEL_SIZE }}
+      - name: Fetch Input Video
+        run: python scripts/01_fetch_video.py --input "${{ github.event.inputs.video_source }}"
+
+      - name: Transcribe Video
         run: python scripts/02_transcribe.py
 
-      - name: 🌐 Step 3 - Translate script (Gemini)
-        if: steps.fetch.outputs.has_video == 'true'
-        env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          TARGET_LANGUAGE: ${{ vars.TARGET_LANGUAGE }}
+      - name: Translate Script
         run: python scripts/03_translate_script.py
 
-      - name: 🔊 Step 4 - TTS dub audio (edge-tts, free, timing-matched)
-        if: steps.fetch.outputs.has_video == 'true'
-        env:
-          EDGE_TTS_VOICE: ${{ vars.EDGE_TTS_VOICE }}
+      - name: Dub Audio
         run: python scripts/04_tts_dub_audio.py
 
-      - name: 🎬 Step 5 - Merge dubbed audio into video
-        if: steps.fetch.outputs.has_video == 'true'
+      - name: Merge Video
         run: python scripts/05_merge_video.py
 
-      - name: 📤 Step 6 - Upload dubbed video to GitHub Release
-        id: upload
-        if: steps.fetch.outputs.has_video == 'true'
+      - name: Upload Output Video
+        run: python scripts/06_upload_github.py
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: python scripts/06_upload_github.py
-
-      - name: 💾 Commit updated watermark (state/last_update_id.txt)
-        if: always()
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          if ! git diff --quiet -- state/last_update_id.txt; then
-            git add state/last_update_id.txt
-            git commit -m "chore: advance Telegram update watermark [skip ci]"
-            git push
-          else
-            echo "No watermark change to commit."
-          fi
-
-      - name: 📁 Upload Artifacts (Debug)
-        if: steps.fetch.outputs.has_video == 'true'
-        uses: actions/upload-artifact@v4
-        with:
-          name: pipeline-output-${{ github.run_number }}
-          path: |
-            output/transcript.json
-            output/translated_script.json
-            output/dubbed_audio.mp3
-            output/final_dubbed_video.mp4
-          retention-days: 3
+          
