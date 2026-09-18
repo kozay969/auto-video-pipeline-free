@@ -1,16 +1,16 @@
 import argparse
 import os
 import sys
-import subprocess
+import shutil
+import requests
 import gdown
 
 def download_gdrive(url, output_path):
     print(f"Downloading from Google Drive: {url}")
-    # Google Drive Link ထဲကနေ File ID ကို ဆွဲထုတ်၍ ဒေါင်းလုဒ်လုပ်ပေးခြင်း
-    gdown.download(url=url, output=output_path, fuzzy=True, quiet=False)
+    # gdown ၏ version အသစ်များအတွက် fuzzy parameter အသုံးမပြုဘဲ ဒေါင်းလုဒ်ဆွဲခြင်း
+    gdown.download(url=url, output=output_path, quiet=False)
 
 def download_direct_file(url, output_path):
-    import requests
     print(f"Downloading direct file from URL: {url}")
     headers = {'User-Agent': 'Mozilla/5.0'}
     response = requests.get(url, headers=headers, stream=True)
@@ -28,6 +28,7 @@ def main():
     parser.add_argument("--input", required=False, help="Video URL or Path")
     args = parser.parse_args()
 
+    # Command Line Argument သို့မဟုတ် Environment Variable မှ ရယူခြင်း
     source = args.input or os.environ.get("VIDEO_URL") or os.environ.get("VIDEO_PATH")
 
     if not source:
@@ -39,19 +40,28 @@ def main():
     output_file = os.path.join(output_dir, "input_video.mp4")
 
     source = source.strip()
+
+    # Web URL ဖြစ်ပါက
     if source.startswith("http://") or source.startswith("https://"):
-        # Google Drive Link ဖြစ်ပါက gdown သုံးမည်
         if "drive.google.com" in source:
             download_gdrive(source, output_file)
         else:
             download_direct_file(source, output_file)
+    # Repo ထဲရှိ Local File ဖြစ်ပါက
     elif os.path.exists(source):
-        import shutil
         shutil.copy(source, output_file)
+        print(f"Copied local file from {source} to {output_file}")
     else:
-        print(f"Error: Provided path does not exist: {source}")
+        print(f"Error: Provided path or link does not exist: {source}")
         sys.exit(1)
+
+    # ဖိုင်ဒေါင်းလုဒ် အောင်မြင်မှုနှင့် အရွယ်အစား စစ်ဆေးခြင်း
+    if not os.path.exists(output_file) or os.path.getsize(output_file) < 1000:
+        print("Error: Downloaded file is missing or corrupted.")
+        sys.exit(1)
+
+    print(f"Video file ready at {output_file} (Size: {os.path.getsize(output_file)} bytes)")
 
 if __name__ == "__main__":
     main()
-        
+            
